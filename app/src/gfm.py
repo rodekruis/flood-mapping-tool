@@ -66,8 +66,8 @@ def download_stuff(coordinates):
     for f in Path("./output").glob("*"):
         f.unlink()
     r = requests.get(download_link)
-    z = zipfile.ZipFile(io.BytesIO(r.content))
-    z.extractall("./output")
+    with zipfile.ZipFile(io.BytesIO(r.content)) as z:
+        z.extractall(str(Path("./output")))
 
 
 def visualise_stuff():

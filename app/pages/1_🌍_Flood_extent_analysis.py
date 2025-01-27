@@ -7,7 +7,6 @@ from src.config_parameters import params
 from src.gfm import download_stuff, visualise_stuff
 from src.utils import (
     add_about,
-    add_logo,
     set_tool_page_style,
     toggle_menu_button,
 )
@@ -20,7 +19,6 @@ st.set_page_config(layout="wide", page_title=params["browser_title"])
 toggle_menu_button()
 
 # Create sidebar
-add_logo("app/img/MA-logo.png")
 add_about()
 
 # Page title
@@ -55,7 +53,6 @@ with col1:
             location=[52.205276, 0.119167],
             zoom_start=3,
             control_scale=True,
-            # crs='EPSG4326'
         )
         # Add drawing tools to map
         Draw(
@@ -74,7 +71,7 @@ with col1:
         # Add minimap to map
         MiniMap().add_to(Map)
         # Export map to Streamlit
-        output = st_folium(Map, width=800, height=600)
+        input_map = st_folium(Map, width=800, height=600)
 with col2:
     # Add collapsable container for image dates
     with st.expander("Choose Image Dates"):
@@ -97,7 +94,9 @@ with col2:
     # Introduce date validation
     check_dates = start_date <= end_date
     # Introduce drawing validation (a polygon needs to exist)
-    check_drawing = output["all_drawings"] != [] and output["all_drawings"] is not None
+    check_drawing = (
+        input_map["all_drawings"] != [] and input_map["all_drawings"] is not None
+    )
 # What happens when button is clicked on?
 if submitted:
     with col2:
@@ -111,7 +110,7 @@ if submitted:
             # Add output for computation
             with st.spinner("Computing... Please wait..."):
                 # Extract coordinates from drawn polygon
-                coords = output["all_drawings"][-1]["geometry"]["coordinates"][0]
+                coords = input_map["all_drawings"][-1]["geometry"]["coordinates"][0]
                 print(f"Coords: {coords}")
                 # Create geometry from coordinates
                 download_stuff(coords)

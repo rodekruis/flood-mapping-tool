@@ -21,8 +21,6 @@ params = {
     ),
     # Layout and styles
     ## Sidebar
-    "MA_logo_width": "60%",
-    "MA_logo_background_position": "35% 10%",
     "sidebar_header": "Flood Mapping Tool",
     "sidebar_header_fontsize": "30px",
     "sidebar_header_fontweight": "bold",
