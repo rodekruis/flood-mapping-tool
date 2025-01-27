@@ -1,11 +1,9 @@
 """Documentation page for Streamlit app."""
 
 import streamlit as st
-from PIL import Image
 from src.config_parameters import params
 from src.utils import (
     add_about,
-    add_logo,
     set_doc_page_style,
     toggle_menu_button,
 )
@@ -17,7 +15,6 @@ st.set_page_config(layout="wide", page_title=params["browser_title"])
 toggle_menu_button()
 
 # Create sidebar
-add_logo("app/img/MA-logo.png")
 add_about()
 
 # Set page style
