@@ -1,9 +1,11 @@
 """Functions for the layout of the Streamlit app, including the sidebar."""
+
 import base64
 import os
 from datetime import date
 
 import streamlit as st
+
 from src.config_parameters import params
 
 
@@ -183,46 +185,16 @@ def add_about():
     Returns:
         None
     """
-    today = date.today().strftime("%B %d, %Y")
-
     # About textbox
     st.sidebar.markdown("## About")
     st.sidebar.markdown(
-        """
-        <div class='warning' style='
-            background-color: %s;
-            margin: 0px;
-            padding: 1em;'
-        '>
-            <p style='
-                margin-left:1em;
-                margin: 0px;
-                font-size: 1rem;
-                margin-bottom: 1em;
-            '>
-                    Last update: %s
-            </p>
-            <p style='
-                margin-left:1em;
-                font-size: 1rem;
-                margin: 0px
-            '>
-                <a href='%s'>
-                Wiki reference page</a><br>
-                <a href='%s'>
-                GitHub repository</a><br>
-                <a href='%s'>
-                Data Science Lab</a>
-            </p>
-        </div>
-        """
-        % (
-            params["about_box_background_color"],
-            today,
-            params["url_project_wiki"],
-            params["url_github_repo"],
-            params["url_data_science_wiki"],
-        ),
+        f"""
+        <p>
+            Todo: general about stuff <br />
+            <a href='{params["url_github_repo"]}'>
+            Github Repo</a>
+        </p>
+        """,
         unsafe_allow_html=True,
     )
 

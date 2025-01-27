@@ -1,4 +1,5 @@
 """Documentation page for Streamlit app."""
+
 import streamlit as st
 from PIL import Image
 from src.config_parameters import params
@@ -28,62 +29,8 @@ st.markdown("# Documentation")
 # First section
 st.markdown("## Methodology")
 st.markdown(
-    """
-    The methodology is based on the workflow depicted in Figure 1. In
-    addition to Sentinel-1 synthetic-aperture radar <a href='%s'>SAR</a> data,
-    two other datasets are used through <a href='%s'>Google Earth Engine</a>:
-    <ul>
-        <li><p>
-            The <i>WWF HydroSHEDS Void-Filled DEM, 3 Arc-Seconds</i>
-            <a href='%s'>dataset</a> is based on elevation data
-            obtained in 2000 by NASA's Shuttle Radar Topography Mission (SRTM),
-            and it is used to mask out areas with more than 5 percent slope
-            (see following section on limitations).
-        </p>
-        <li><p>
-            The <i>JRC Global Surface Water Mapping Layers, v1.4</i>
-            <a href='%s'>dataset</a> contains maps of the
-            location and temporal distribution of surface water from 1984 to
-            2021, and it is used to mask areas with perennial water bodies,
-            such as rivers or lakes.
-        </p>
-    </ul>
-    """
-    % (
-        params["url_sentinel_dataset"],
-        params["url_gee"],
-        params["url_elevation_dataset"],
-        params["url_surface_water_dataset"],
-    ),
-    unsafe_allow_html=True,
+    "TODO: new documentation, only kept in Sentinel 1 section unchanged from the Mapaction tool"
 )
-
-# Add image workflow
-img = Image.open("app/img/workflow.png")
-col1, mid, col2, last = st.columns([5, 3, 10, 10])
-with col1:
-    st.image(img, width=350)
-with col2:
-    # Trick to add caption at the bottom of the column, as Streamlit has not
-    # developed a functionality to allign text to bottom
-    space_before_caption = "<br>" * 27
-    st.markdown(
-        space_before_caption,
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        """
-        <p style="font-size:%s;">
-            Figure 1. Workflow of the flood mapping methodology (<a href=
-            '%s'>source</a>).
-        </p>
-        """
-        % (
-            params["docs_caption_fontsize"],
-            params["url_unspider_tutorial_detail"],
-        ),
-        unsafe_allow_html=True,
-    )
 
 
 # Second section
@@ -138,42 +85,5 @@ st.markdown(
         </p>
         """
     % (params["docs_caption_fontsize"], params["url_sentinel_img_location"]),
-    unsafe_allow_html=True,
-)
-
-# Third section
-st.markdown("## Key limitations")
-st.markdown(
-    """
-    Radar imagery is great for detecting floods, as it is good at picking up
-    water and it is not affected by the time of the day or clouds (at this
-    wavelength). But it has its limits, and performs actually quite bad if
-    having to detect water in mountainous regions, especially if with narrow
-    valleys, and in urban areas (urban canyons). The reasons are mainly around
-    the viewing angles, which can cause image distortions. This method may also
-    result in false positives for other land cover changes with smooth
-    surfaces, such as roads and sand. Rough surface texture caused by wind or
-    rainfall may also make it challenging for the radar imagery to identify
-    water bodies.
-    """,
-    unsafe_allow_html=True,
-)
-
-
-# Last section
-st.markdown("## Useful links")
-st.markdown(
-    """
-    <a href='%s'>UN-SPIDER recommended practice</a><br>
-    <a href='%s'>Sentinel-1 satellite imagery user guide</a><br>
-    Relevant scientific publications:
-    <a href='%s'>1</a>, <a href='%s'>2</a><br>
-    """
-    % (
-        params["url_unspider_tutorial"],
-        params["url_sentinel_esa"],
-        params["url_publication_1"],
-        params["url_publication_2"],
-    ),
     unsafe_allow_html=True,
 )
