@@ -1,9 +1,11 @@
 """Functions for the layout of the Streamlit app, including the sidebar."""
+
 import base64
 import os
 from datetime import date
 
 import streamlit as st
+
 from src.config_parameters import params
 
 
@@ -92,88 +94,6 @@ def set_tool_page_style():
 
 
 # Sidebar
-@st.cache(allow_output_mutation=True)
-def get_base64_of_bin_file(png_file):
-    """
-    Get base64 from image file.
-
-    Inputs:
-        png_file (str): image filename
-
-    Returns:
-        str: encoded ASCII file
-    """
-    with open(png_file, "rb") as f:
-        data = f.read()
-    return base64.b64encode(data).decode()
-
-
-def build_markup_for_logo(
-    png_file,
-):
-    """
-    Create full string for navigation bar, including logo and title.
-
-    Inputs:
-        png_file (str): image filename
-        background_position (str): position logo
-        image_width (str): width logo
-        image_height (str): height logo
-
-    Returns
-        str: full string with logo and title for sidebar
-    """
-    binary_string = get_base64_of_bin_file(png_file)
-    return """
-            <style>
-                [data-testid="stSidebarNav"] {
-                    background-image: url("data:image/png;base64,%s");
-                    background-repeat: no-repeat;
-                    padding-top: 50px;
-                    padding-bottom: 10px;
-                    background-position: %s;
-                    background-size: %s %s;
-                }
-                [data-testid="stSidebarNav"]::before {
-                    content: "%s";
-                    margin-left: 20px;
-                    margin-top: 20px;
-                    margin-bottom: 20px;
-                    font-size: %s;
-                    font-weight: %s;
-                    position: relative;
-                    text-align: center;
-                    top: 85px;
-                }
-            </style>
-            """ % (
-        binary_string,
-        params["MA_logo_background_position"],
-        params["MA_logo_width"],
-        "",
-        params["sidebar_header"],
-        params["sidebar_header_fontsize"],
-        params["sidebar_header_fontweight"],
-    )
-
-
-def add_logo(png_file):
-    """
-    Add logo to sidebar.
-
-    Inputs:
-        png_file (str): image filename
-    Returns:
-        None
-    """
-    logo_markup = build_markup_for_logo(png_file)
-    # st.sidebar.title("ciao")
-    st.markdown(
-        logo_markup,
-        unsafe_allow_html=True,
-    )
-
-
 def add_about():
     """
     Add about and contacts to sidebar.
@@ -183,46 +103,16 @@ def add_about():
     Returns:
         None
     """
-    today = date.today().strftime("%B %d, %Y")
-
     # About textbox
     st.sidebar.markdown("## About")
     st.sidebar.markdown(
-        """
-        <div class='warning' style='
-            background-color: %s;
-            margin: 0px;
-            padding: 1em;'
-        '>
-            <p style='
-                margin-left:1em;
-                margin: 0px;
-                font-size: 1rem;
-                margin-bottom: 1em;
-            '>
-                    Last update: %s
-            </p>
-            <p style='
-                margin-left:1em;
-                font-size: 1rem;
-                margin: 0px
-            '>
-                <a href='%s'>
-                Wiki reference page</a><br>
-                <a href='%s'>
-                GitHub repository</a><br>
-                <a href='%s'>
-                Data Science Lab</a>
-            </p>
-        </div>
-        """
-        % (
-            params["about_box_background_color"],
-            today,
-            params["url_project_wiki"],
-            params["url_github_repo"],
-            params["url_data_science_wiki"],
-        ),
+        f"""
+        <p>
+            Todo: general about stuff <br />
+            <a href='{params["url_github_repo"]}'>
+            Github Repo</a>
+        </p>
+        """,
         unsafe_allow_html=True,
     )
 
