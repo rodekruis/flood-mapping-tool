@@ -97,62 +97,38 @@ def download_gfm_geojson(area_name, bbox, new_coordinates=None, output_file_path
         if aoi["aoi_name"] == area_name:
             aoi_id = aoi["aoi_id"]
             break
-    #         print(aoi)
 
-    # # Collect all matching AOIs (same name)
-    # matching_geometries = []
-    # for aoi in response.json()["aois"]:
-    #     if aoi["aoi_name"] == area_name:
-    #         geojson_geometry = aoi["geoJSON"]["geometry"]
-    #         matching_geometries.append(shape(geojson_geometry))
-
-    # if not matching_geometries:
-    #     raise ValueError(f"No AOIs found for area name: {area_name}")
-
-    # # Merge all matching AOI geometries into a single unified polygon
-    # merged_geometry = unary_union(matching_geometries)
-
-    # # Handle MultiPolygon cases (if AOIs are disjointed)
-    # if merged_geometry.geom_type == "MultiPolygon":
-    #     merged_geometry = MultiPolygon([p for p in merged_geometry])
-
-    # # Convert back to GeoJSON
-    # merged_geojson = {
-    #     "type": "Feature",
-    #     "properties": {"aoi_name": area_name},
-    #     "geometry": json.loads(json.dumps(merged_geometry.__geo_interface__)),
-    # }
-
-    # print(f"Merged {len(matching_geometries)} AOIs into one for '{area_name}'.")
-
-    # return merged_geojson
-
-    # Get product id
+    # Get all product IDs
     prod_url = f"{base_url}/aoi/{aoi_id}/products"
     response = requests.get(prod_url, headers=header)
-    product_id = response.json()["products"][0]["product_id"]
-    print(f"got product_id {product_id}")
+    products = response.json()["products"]
+    print(f"Found {len(products)} products for {area_name}")
 
-    # Get download link
-    download_url = f"{base_url}/download/product/{product_id}"
-    response = requests.get(download_url, headers=header)
-    download_link = response.json()["download_link"]
-    print("Got download link")
-
-    # Set output file path and create directory if it doesn't exist
+    # Set output path
     if not output_file_path:
         output_file_path = f"./output/{area_name}"
 
     Path(output_file_path).mkdir(parents=True, exist_ok=True)
 
-    # Download and unzip file
-    for f in Path(output_file_path).glob("*"):
+    # Remove existing flood files before downloading
+    for f in Path(output_file_path).glob("*FLOOD*.geojson"):
         f.unlink()
-    print("Donwloading...")
-    r = requests.get(download_link)
-    print("Extracting zip...")
-    with zipfile.ZipFile(io.BytesIO(r.content)) as z:
-        z.extractall(str(Path(output_file_path)))
+
+    # Download all available flood products
+    for product in products:
+        product_id = product["product_id"]
+        print(f"Downloading product: {product_id}")
+
+        download_url = f"{base_url}/download/product/{product_id}"
+        response = requests.get(download_url, headers=header)
+        download_link = response.json()["download_link"]
+
+        # Download and unzip file
+        r = requests.get(download_link)
+        with zipfile.ZipFile(io.BytesIO(r.content)) as z:
+            print("Extracting...")
+            z.extractall(str(Path(output_file_path)))
+
     print("Done!")
 
 
