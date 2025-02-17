@@ -1,15 +1,12 @@
 import io
 import json
 import os
-import warnings
 import zipfile
 from pathlib import Path
 
 import folium
 import requests
 from dotenv import load_dotenv
-from shapely.geometry import MultiPolygon, shape
-from shapely.ops import unary_union
 
 load_dotenv()
 
