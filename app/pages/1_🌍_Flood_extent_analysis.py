@@ -38,39 +38,40 @@ row1 = st.container()
 col1, col2 = row1.columns([2, 1])
 feat_group_selected_area = folium.FeatureGroup(name="selected_area")
 with col1:
-    area_type = st.radio(
-        label="Area Type",
-        options=["Existing area", "New area"],
-        label_visibility="hidden",
-    )
-    if area_type == "Existing area":
-        with open("./bboxes/bboxes.json", "r") as f:
-            bboxes = json.load(f)
-        selected_area = st.selectbox("Select saved area", options=bboxes.keys())
+    with open("./bboxes/bboxes.json", "r") as f:
+        bboxes = json.load(f)
+    selected_area = st.selectbox("Select saved area", options=bboxes.keys())
 
-        # retrieve and select available dates
-        if selected_area:
-            available_date_ranges = list(
-                bboxes[selected_area].keys()
-            )  # will be used again below
-            selected_date_range = st.selectbox(
-                "Select available date range", options=available_date_ranges
+    # retrieve and select available dates
+    if selected_area:
+        area_folder = Path(f"./output/{selected_area}")
+        if area_folder.exists():
+            available_product_times = [
+                str(f.name) for f in area_folder.iterdir() if f.is_dir()
+            ]
+
+            available_product_times = [
+                prod_time.replace("_", ":") for prod_time in available_product_times
+            ]
+            selected_product_time = st.selectbox(
+                "Select available date range", options=available_product_times
             )
+        else:
+            selected_product_time = None
 
-            # display the bounding box
-            bounding_box = bboxes[selected_area][selected_date_range]["bounding_box"]
-            geojson_selected_area = folium.GeoJson(bounding_box)
-            feat_group_selected_area.add_child(geojson_selected_area)
+        # display the bounding box
+        bounding_box = bboxes[selected_area]["bounding_box"]
+        geojson_selected_area = folium.GeoJson(bounding_box)
+        feat_group_selected_area.add_child(geojson_selected_area)
 
-            # geojson_selected_area = folium.GeoJson(bboxes[selected_area])
-            # feat_group_selected_area.add_child(geojson_selected_area)
+        # geojson_selected_area = folium.GeoJson(bboxes[selected_area])
+        # feat_group_selected_area.add_child(geojson_selected_area)
+        if selected_product_time:
             geojson_flood_area = get_existing_flood_geojson(
-                selected_area, selected_date_range
+                selected_area, selected_product_time
             )
             feat_group_selected_area.add_child(geojson_flood_area)
 
-    elif area_type == "New area":
-        new_area_name = st.text_input("Area name")
     # Add collapsable container for input map
     with st.expander("Input map", expanded=True):
         # Create folium map
@@ -85,20 +86,6 @@ with col1:
             # this is necessary to start up the page
             folium_map = folium.Map(location=[39, 0], zoom_start=8)
 
-        # Add drawing tools to map
-        if area_type == "New area":
-            Draw(
-                export=False,
-                draw_options={
-                    "circle": False,
-                    "polyline": False,
-                    "polygon": False,
-                    "rectangle": True,
-                    "marker": False,
-                    "circlemarker": False,
-                },
-            ).add_to(folium_map)
-
         m = st_folium(
             folium_map,
             width=800,
@@ -107,7 +94,7 @@ with col1:
         )
 with col2:
     # Add collapsable container for image dates
-    with st.expander("Choose Image Dates"):
+    with st.expander("Choose Dates", expanded=True):
         start_date = st.date_input("Start date")
         end_date = st.date_input("End date")
     # Add collapsable container for parameters
@@ -115,12 +102,7 @@ with col2:
         # Add slider for threshold
         st.text("Add relevant (API) parameters here")
 
-    # Button to trigger GFM data retrieval
-    if area_type == "New area":
-        button_text = "Get new flood extent"
-    else:
-        button_text = "Update flood extent"
-    submitted = st.button(button_text)
+    submitted = st.button("Update flood extent")
 
 
 # If the button is clicked do the following
@@ -129,72 +111,20 @@ if submitted:
         # Some basic validation on dates and that there's an area if relevant
         get_gfm = True
         check_dates = start_date <= end_date
-        if area_type == "New area":
-            check_drawing = m["all_drawings"] != [] and m["all_drawings"] is not None
 
         # Output error if dates are not valid
         if not check_dates:
             st.error("Make sure that the dates were inserted correctly")
             get_gfm = False
-        # Output error if no polygons were drawn
-        if area_type == "New area":
-            if not check_drawing:
-                st.error("Please create a region using the rectangle tool on the map.")
-                get_gfm = False
-            elif new_area_name == "":
-                st.error("Please provide a name for the new area")
-                get_gfm = False
 
         # Only if checks pass go and get the GFM data
         if get_gfm:
-            if area_type == "Existing area":
-                area_name = selected_area
-            elif area_type == "New area":
-                area_name = new_area_name
-
             # Show loader because it will take a while
             with st.spinner("Getting GFM files... Please wait..."):
-                if area_type == "New area":
-                    # Convert date input into a string format for JSON storage
-                    date_range_str = f"{start_date}_to_{end_date}"
-
-                    # Load existing bboxes
-                    with open("./bboxes/bboxes.json", "r") as f:
-                        bboxes = json.load(f)
-
-                    # Get the drawn area
-                    selected_area_geojson = m["all_drawings"][-1]
-
-                    # If the area doesn't exist, create it
-                    if new_area_name not in bboxes:
-                        bboxes[new_area_name] = {}
-
-                    # Save the new bounding box under the date range key
-                    bboxes[new_area_name][date_range_str] = {
-                        "bounding_box": selected_area_geojson,
-                        "flood_files": [],  # Will be populated when files are downloaded
-                    }
-
-                    # Write the updated data back to file
-                    with open("./bboxes/bboxes.json", "w") as f:
-                        json.dump(bboxes, f, indent=4)
-
-                    # Download files, also getting coordinates for GFM
-                    coords = selected_area_geojson["geometry"]["coordinates"][0]
-                    # download_gfm_geojson(area_name, new_coordinates=coords)
-                    download_gfm_geojson(
-                        area_name,
-                        bbox=bboxes[new_area_name][date_range_str]["bounding_box"],
-                        new_coordinates=coords,
-                    )
-
-                # For an existing area just get the latest update from GFM
-                if area_type == "Existing area":
-                    # download_gfm_geojson(area_name)
-                    download_gfm_geojson(
-                        selected_area,
-                        bbox=bboxes[selected_area][selected_date_range]["bounding_box"],
-                    )
+                # download_gfm_geojson(area_name)
+                download_gfm_geojson(
+                    selected_area, from_date=start_date, to_date=end_date
+                )
 
             # Display that getting the files is finished
             st.markdown("Getting GFM files finished")
