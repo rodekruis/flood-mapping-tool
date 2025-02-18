@@ -51,7 +51,9 @@ def sync_cached_data(bboxes_path="./bboxes/bboxes.json", output_dir="./output"):
         print(f"Error: {bboxes_path} is not a valid JSON file.")
 
 
-def download_gfm_geojson(area_name, bbox, new_coordinates=None, output_file_path=None):
+def download_gfm_geojson(
+    area_name, from_date=None, to_date=None, output_file_path=None
+):
     """
     Should provide an existing area name or a new area name with new_coordinates
     """
@@ -70,21 +72,6 @@ def download_gfm_geojson(area_name, bbox, new_coordinates=None, output_file_path
     header = {"Authorization": f"bearer {access_token}"}
     print("logged in")
 
-    # Only if new coordinates are provided create the AOI in GFM
-    if new_coordinates:
-        # Create area of impact
-        create_aoi_url = f"{base_url}/aoi/create"
-
-        payload = {
-            "aoi_name": area_name,
-            "description": area_name,
-            "user_id": user_id,
-            "geoJSON": {"type": "Polygon", "coordinates": [new_coordinates]},
-        }
-
-        r = requests.post(url=create_aoi_url, json=payload, headers=header)
-        print("Posted new AOI")
-
     # Get Area of Impact
     aoi_url = f"{base_url}/aoi/user/{user_id}"
     response = requests.get(aoi_url, headers=header)
@@ -96,24 +83,30 @@ def download_gfm_geojson(area_name, bbox, new_coordinates=None, output_file_path
             break
 
     # Get all product IDs
+    params = {
+        "time": "range",
+        "from": f"{from_date}T00:00:00",
+        "to": f"{to_date}T00:00:00",
+    }
     prod_url = f"{base_url}/aoi/{aoi_id}/products"
-    response = requests.get(prod_url, headers=header)
+    response = requests.get(prod_url, headers=header, params=params)
     products = response.json()["products"]
     print(f"Found {len(products)} products for {area_name}")
 
-    # Set output path
     if not output_file_path:
-        output_file_path = f"./output/{area_name}"
-
-    Path(output_file_path).mkdir(parents=True, exist_ok=True)
-
-    # Remove existing flood files before downloading
-    for f in Path(output_file_path).glob("*FLOOD*.geojson"):
-        f.unlink()
+        base_file_path = "./output"
 
     # Download all available flood products
     for product in products:
         product_id = product["product_id"]
+
+        # Converts product_time from e.g. "2025-01-05T06:10:37" to ""2025-01-05 06h
+        # Reason for bucketing per hour is that products are often seconds or minutes apart and should be grouped
+        product_time = product["product_time"]
+        product_time = product_time.split(":")[0].replace("T", " ") + "h"
+        output_file_path = f"{base_file_path}/{area_name}/{product_time}"
+        Path(output_file_path).mkdir(parents=True, exist_ok=True)
+
         print(f"Downloading product: {product_id}")
 
         download_url = f"{base_url}/download/product/{product_id}"
@@ -129,20 +122,16 @@ def download_gfm_geojson(area_name, bbox, new_coordinates=None, output_file_path
     print("Done!")
 
 
-def get_existing_flood_geojson(area_name, date_range, output_file_path=None):
+def get_existing_flood_geojson(area_name, product_time, output_file_path=None):
     """
     Getting a saved GFM flood geojson in an output folder of GFM files. Merge in one feature group if multiple.
     """
-
+    product_time = product_time.replace(":", "_")
     if not output_file_path:
-        output_file_path = f"./output/{area_name}/{date_range}"
-
-    # Ensure the output directory exists
-    # if not Path(output_file_path).exists():
-    #     raise FloodGeoJsonError(f"Error: Output folder '{output_file_path}' does not exist.")
+        output_file_path = f"./output/{area_name}/{product_time}"
 
     # Combine multiple flood files into a FeatureGroup
-    flood_geojson_group = folium.FeatureGroup(name=f"{area_name} Floods {date_range}")
+    flood_geojson_group = folium.FeatureGroup(name=f"{area_name} Floods {product_time}")
 
     for flood_file in Path(output_file_path).glob("*FLOOD*.geojson"):
         with open(flood_file, "r") as f:
@@ -153,9 +142,3 @@ def get_existing_flood_geojson(area_name, date_range, output_file_path=None):
     # TODO: consider merging multiple flood layers into one, to avoid overlap
 
     return flood_geojson_group
-
-
-if __name__ == "__main__":
-    # download_gfm_geojson('Catania')
-    gj = get_existing_flood_geojson("Albufera Floods")
-    print(type(gj))
