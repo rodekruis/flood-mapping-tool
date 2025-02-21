@@ -122,6 +122,30 @@ def download_gfm_geojson(
     print("Done!")
 
 
+def retrieve_all_aois():
+    print("Retrieving all AOIs from GFM API")
+    username = os.environ["gfm_username"]
+    password = os.environ["gfm_password"]
+    base_url = "https://api.gfm.eodc.eu/v1"
+
+    # Get token, setup header
+    token_url = f"{base_url}/auth/login"
+
+    payload = {"email": username, "password": password}
+
+    response = requests.post(token_url, json=payload)
+    user_id = response.json()["client_id"]
+    access_token = response.json()["access_token"]
+    header = {"Authorization": f"bearer {access_token}"}
+
+    aoi_url = f"{base_url}/aoi/user/{user_id}"
+    response = requests.get(aoi_url, headers=header)
+
+    aois = response.json()["aois"]
+
+    return aois
+
+
 def get_existing_flood_geojson(area_name, product_time, output_file_path=None):
     """
     Getting a saved GFM flood geojson in an output folder of GFM files. Merge in one feature group if multiple.

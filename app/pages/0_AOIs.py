@@ -1,13 +1,12 @@
 import json
 import os
-from pathlib import Path
 
 import folium
 import requests
 import streamlit as st
 from folium.plugins import Draw
 from src.config_parameters import params
-from src.gfm import download_gfm_geojson, get_existing_flood_geojson, sync_cached_data
+from src.gfm import retrieve_all_aois
 from src.utils import (
     add_about,
     set_tool_page_style,
@@ -34,8 +33,18 @@ set_tool_page_style()
 row1 = st.container()
 save_area = False
 
+# To track whether radio selector was changed or something else on the page
+# To prevent reloading on each map change
+if "prev_radio_selection" not in st.session_state:
+    st.session_state["prev_radio_selection"] = ""
+
+if "all_aois" not in st.session_state:
+    st.session_state["all_aois"] = retrieve_all_aois()
+
+
 with row1:
-    action_type = st.radio(
+    feat_group_selected_area = folium.FeatureGroup(name="selected_area")
+    radio_selection = st.radio(
         label="Action Type",
         options=["See Areas", "Create New Area", "Delete Area"],
         label_visibility="hidden",
@@ -43,18 +52,19 @@ with row1:
 
     # call to render Folium map in Streamlit
     folium_map = folium.Map([39, 0], zoom_start=8)
-    feat_group_selected_area = folium.FeatureGroup(name="selected_area")
 
-    if action_type == "See Areas":
-        with open("./bboxes/bboxes.json", "r") as f:
-            bboxes = json.load(f)
-        for area_name in bboxes.keys():
-            bbox = bboxes[area_name]["bounding_box"]
+    if radio_selection == "See Areas":
+        if st.session_state["prev_radio_selection"] != "See Areas":
+            st.session_state["all_aois"] = retrieve_all_aois()
+
+        for aoi in st.session_state["all_aois"]:
+            bbox = aoi["geoJSON"]
             feat_group_selected_area.add_child(folium.GeoJson(bbox))
 
         folium_map.fit_bounds(feat_group_selected_area.get_bounds())
+        st.session_state["prev_radio_selection"] = "See Areas"
 
-    elif action_type == "Create New Area":
+    elif radio_selection == "Create New Area":
         Draw(
             export=False,
             draw_options={
@@ -70,7 +80,9 @@ with row1:
         new_area_name = st.text_input("Area name")
         save_area = st.button("Save Area")
 
-    elif action_type == "Delete Area":
+        st.session_state["prev_radio_selection"] = "Create New Area"
+
+    elif radio_selection == "Delete Area":
         # Load existing bboxes
         with open("./bboxes/bboxes.json", "r") as f:
             bboxes = json.load(f)
@@ -90,13 +102,10 @@ with row1:
             with open("./bboxes/bboxes.json", "w") as f:
                 json.dump(bboxes, f)
             st.toast("Area successfully deleted")
+        st.session_state["prev_radio_selection"] = "Delete Area"
 
     with open("./bboxes/bboxes.json", "r") as f:
         bboxes = json.load(f)
-
-    # geojson_catania = get_existing_flood_geojson("Catania")
-    # print(geojson_catania)
-    # geojson_selected_area = folium.GeoJson(geojson_catania)
 
     # feat_group_selected_area.add_child(geojson_selected_area)
     m = st_folium(
