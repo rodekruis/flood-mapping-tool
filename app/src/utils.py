@@ -1,12 +1,19 @@
 """Functions for the layout of the Streamlit app, including the sidebar."""
 
-import base64
+import json
 import os
-from datetime import date
 
+import folium
+import pandas as pd
 import streamlit as st
 
 from src.config_parameters import params
+
+
+def get_aoi_id_from_selector_preview(all_aois, name_id_preview):
+    for aoi_id, aoi in all_aois.items():
+        if aoi["name_id_preview"] == name_id_preview:
+            return aoi_id
 
 
 # Check if app is deployed
@@ -148,3 +155,21 @@ def add_about():
         % (params["about_box_background_color"], contacts_text),
         unsafe_allow_html=True,
     )
+
+
+def get_existing_flood_geojson(product_id, output_file_path="./output/"):
+    """
+    Getting a saved GFM flood geojson in an output folder of GFM files. Merge in one feature group if multiple.
+    """
+    index_df = pd.read_csv(output_file_path + "index.csv")
+    geojson_path = index_df[index_df["product"] == product_id].geojson_path.values[0]
+
+    # Combine multiple flood files into a FeatureGroup
+    flood_geojson_group = folium.FeatureGroup(name=product_id)
+
+    with open(geojson_path, "r") as f:
+        geojson_data = json.load(f)
+        flood_layer = folium.GeoJson(geojson_data)
+        flood_geojson_group.add_child(flood_layer)
+
+    return flood_geojson_group
