@@ -1,62 +1,18 @@
 import io
-import json
 import os
 import zipfile
 from pathlib import Path
 
-import folium
+import pandas as pd
 import requests
 from dotenv import load_dotenv
 
 load_dotenv()
 
 
-class FloodGeoJsonError(Exception):
-    """Custom exception for errors in fetching flood GeoJSON files."""
-
-    pass
-
-
-def sync_cached_data(bboxes_path="./bboxes/bboxes.json", output_dir="./output"):
-    """
-    Ensures that all areas in bboxes.json have a corresponding folder in ./output/.
-    Removes any area entry from bboxes.json that does not have an output folder.
-    """
-    try:
-        # Load existing bounding boxes
-        with open(bboxes_path, "r") as f:
-            bboxes = json.load(f)
-
-        # Get a set of existing output folders
-        existing_folders = {
-            folder.name for folder in Path(output_dir).iterdir() if folder.is_dir()
-        }
-
-        # Remove entries from bboxes.json if the folder does not exist
-        updated_bboxes = {
-            area: data for area, data in bboxes.items() if area in existing_folders
-        }
-
-        # If changes were made, overwrite bboxes.json
-        if len(updated_bboxes) != len(bboxes):
-            with open(bboxes_path, "w") as f:
-                json.dump(updated_bboxes, f, indent=4)
-            print(f"Updated {bboxes_path}: Removed missing areas.")
-        else:
-            print("All areas have matching folders.")
-
-    except FileNotFoundError:
-        print(f"Error: {bboxes_path} not found.")
-    except json.JSONDecodeError:
-        print(f"Error: {bboxes_path} is not a valid JSON file.")
-
-
-def download_gfm_geojson(
-    area_name, from_date=None, to_date=None, output_file_path=None
-):
-    """
-    Should provide an existing area name or a new area name with new_coordinates
-    """
+# TODO: These functions should be transformed into a proper class mainly to prevent authentication on each call
+# Authentication
+def get_gfm_user_and_token():
     username = os.environ["gfm_username"]
     password = os.environ["gfm_password"]
     base_url = "https://api.gfm.eodc.eu/v1"
@@ -69,76 +25,142 @@ def download_gfm_geojson(
     response = requests.post(token_url, json=payload)
     user_id = response.json()["client_id"]
     access_token = response.json()["access_token"]
+    print("retrieved user id and access token")
+
+    return user_id, access_token
+
+
+# Gets all products for an AOI in a daterange
+def get_area_products(area_id, from_date, to_date):
+    user_id, access_token = get_gfm_user_and_token()
     header = {"Authorization": f"bearer {access_token}"}
-    print("logged in")
 
-    # Get Area of Impact
-    aoi_url = f"{base_url}/aoi/user/{user_id}"
-    response = requests.get(aoi_url, headers=header)
+    base_url = "https://api.gfm.eodc.eu/v1"
 
-    # TODO: now only getting the first AOI, should extend to getting the whole list and unioning the geojsons
-    for aoi in response.json()["aois"]:
-        if aoi["aoi_name"] == area_name:
-            aoi_id = aoi["aoi_id"]
-            break
-
-    # Get all product IDs
     params = {
         "time": "range",
         "from": f"{from_date}T00:00:00",
         "to": f"{to_date}T00:00:00",
     }
-    prod_url = f"{base_url}/aoi/{aoi_id}/products"
+    prod_url = f"{base_url}/aoi/{area_id}/products"
     response = requests.get(prod_url, headers=header, params=params)
     products = response.json()["products"]
-    print(f"Found {len(products)} products for {area_name}")
+    print(f"Found {len(products)} products for {area_id}")
+
+    return products
+
+
+# Will download a product by product_id, saves the flood geojson and updates the index for caching
+def download_flood_product(area_id, product, output_file_path=None):
+    user_id, access_token = get_gfm_user_and_token()
+    header = {"Authorization": f"bearer {access_token}"}
+
+    base_url = "https://api.gfm.eodc.eu/v1"
 
     if not output_file_path:
         base_file_path = "./output"
 
-    # Download all available flood products
-    for product in products:
-        product_id = product["product_id"]
+    product_id = product["product_id"]
+    product_time = product["product_time"]
 
-        # Converts product_time from e.g. "2025-01-05T06:10:37" to ""2025-01-05 06h
-        # Reason for bucketing per hour is that products are often seconds or minutes apart and should be grouped
-        product_time = product["product_time"]
-        product_time = product_time.split(":")[0].replace("T", " ") + "h"
-        output_file_path = f"{base_file_path}/{area_name}/{product_time}"
-        Path(output_file_path).mkdir(parents=True, exist_ok=True)
+    output_file_path = f"{base_file_path}"
+    Path(output_file_path).mkdir(parents=True, exist_ok=True)
 
-        print(f"Downloading product: {product_id}")
+    print(f"Downloading product: {product_id}")
 
-        download_url = f"{base_url}/download/product/{product_id}"
-        response = requests.get(download_url, headers=header)
-        download_link = response.json()["download_link"]
+    download_url = f"{base_url}/download/product/{product_id}"
+    response = requests.get(download_url, headers=header)
+    download_link = response.json()["download_link"]
 
-        # Download and unzip file
-        r = requests.get(download_link)
-        with zipfile.ZipFile(io.BytesIO(r.content)) as z:
-            print("Extracting...")
-            z.extractall(str(Path(output_file_path)))
+    # Download and unzip file
+    r = requests.get(download_link)
+    buffer = io.BytesIO(r.content)
 
-    print("Done!")
+    with zipfile.ZipFile(buffer, "r") as z:
+        namelist = z.namelist()
+        for name in namelist:
+            if "FLOOD" in name and ".geojson" in name:
+                flood_filename = name
+                break
+        z.extract(flood_filename, output_file_path)
+
+    df = pd.DataFrame(
+        {
+            "aoi_id": [area_id],
+            "datetime": [product_time],
+            "product": [product_id],
+            "geojson_path": [output_file_path + "/" + flood_filename],
+        }
+    )
+
+    index_file_path = Path(f"{output_file_path}/index.csv")
+    if index_file_path.is_file():
+        existing_df = pd.read_csv(index_file_path)
+        df = pd.concat([existing_df, df])
+
+    df.to_csv(index_file_path, index=False)
+
+    print(f"Product {product_id} downloaded succesfully")
 
 
-def get_existing_flood_geojson(area_name, product_time, output_file_path=None):
-    """
-    Getting a saved GFM flood geojson in an output folder of GFM files. Merge in one feature group if multiple.
-    """
-    product_time = product_time.replace(":", "_")
-    if not output_file_path:
-        output_file_path = f"./output/{area_name}/{product_time}"
+# Gets all AOIs and transforms them to a dict with some features that are useful in the app, like the bbox
+def retrieve_all_aois():
+    print("Retrieving all AOIs from GFM API")
+    user_id, access_token = get_gfm_user_and_token()
+    header = {"Authorization": f"bearer {access_token}"}
 
-    # Combine multiple flood files into a FeatureGroup
-    flood_geojson_group = folium.FeatureGroup(name=f"{area_name} Floods {product_time}")
+    base_url = "https://api.gfm.eodc.eu/v1"
 
-    for flood_file in Path(output_file_path).glob("*FLOOD*.geojson"):
-        with open(flood_file, "r") as f:
-            geojson_data = json.load(f)
-            flood_layer = folium.GeoJson(geojson_data)
-            flood_geojson_group.add_child(flood_layer)
+    aoi_url = f"{base_url}/aoi/user/{user_id}"
+    response = requests.get(aoi_url, headers=header)
 
-    # TODO: consider merging multiple flood layers into one, to avoid overlap
+    aois = response.json()["aois"]
 
-    return flood_geojson_group
+    aois = {
+        aoi["aoi_id"]: {
+            "name": aoi["aoi_name"],
+            "bbox": aoi["geoJSON"],
+            "name_id_preview": f"{aoi['aoi_name']} - {aoi['aoi_id'][:6]}...",
+        }
+        for aoi in aois
+    }
+
+    return aois
+
+
+# Creates AOI on GFM using API
+def create_aoi(new_area_name, coordinates):
+    user_id, access_token = get_gfm_user_and_token()
+    header = {"Authorization": f"bearer {access_token}"}
+
+    base_url = "https://api.gfm.eodc.eu/v1"
+
+    # Create area of impact
+    print("Creating new area of impact")
+    create_aoi_url = f"{base_url}/aoi/create"
+
+    payload = {
+        "aoi_name": new_area_name,
+        "description": new_area_name,
+        "user_id": user_id,
+        "geoJSON": {"type": "Polygon", "coordinates": coordinates},
+    }
+
+    r = requests.post(url=create_aoi_url, json=payload, headers=header)
+    print("Posted new AOI")
+
+
+# Deletes AOI on GFM using API
+def delete_aoi(aoi_id):
+    user_id, access_token = get_gfm_user_and_token()
+    header = {"Authorization": f"bearer {access_token}"}
+
+    base_url = "https://api.gfm.eodc.eu/v1"
+
+    # Create area of impact
+    print(f"Deleting area of impact {aoi_id}")
+    delete_aoi_url = f"{base_url}/aoi/delete/id/{aoi_id}"
+    print(delete_aoi_url)
+
+    r = requests.delete(url=delete_aoi_url, headers=header)
+    print("AOI deleted")

@@ -11,5 +11,5 @@ dependencies = [
     "python-dotenv==1.0.1",
     "streamlit>=1.41.1",
     "streamlit-folium>=0.24.0",
-    "ipykernel>=6.29.5",
+    "ipykernel>=6.29.5"
 ]

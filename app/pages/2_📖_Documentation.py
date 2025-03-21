@@ -1,4 +1,4 @@
-"""Documentation page for Streamlit app."""
+# """Documentation page for Streamlit app."""
 
 import streamlit as st
 from src.config_parameters import params
