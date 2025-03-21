@@ -1,7 +1,5 @@
 import io
 import os
-import shutil
-import tempfile
 import zipfile
 from pathlib import Path
 
@@ -78,19 +76,20 @@ def download_flood_product(area_id, product, output_file_path=None):
     r = requests.get(download_link)
     buffer = io.BytesIO(r.content)
 
-    with tempfile.TemporaryDirectory() as tempdir:
-        with zipfile.ZipFile(buffer) as z:
-            z.extractall(tempdir)
-            for flood_file in Path(tempdir).glob("*FLOOD*.geojson"):
-                dest_file = output_file_path + "/" + flood_file.name
-                shutil.copy(flood_file, dest_file)
+    with zipfile.ZipFile(buffer, "r") as z:
+        namelist = z.namelist()
+        for name in namelist:
+            if "FLOOD" in name and ".geojson" in name:
+                flood_filename = name
+                break
+        z.extract(flood_filename, output_file_path)
 
     df = pd.DataFrame(
         {
             "aoi_id": [area_id],
             "datetime": [product_time],
             "product": [product_id],
-            "geojson_path": [dest_file],
+            "geojson_path": [output_file_path + "/" + flood_filename],
         }
     )
 
