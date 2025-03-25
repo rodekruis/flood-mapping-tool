@@ -1,9 +1,10 @@
 """Functions for the layout of the Streamlit app, including the sidebar."""
 
+import io
 import json
 import os
+import zipfile
 
-import folium
 import pandas as pd
 import streamlit as st
 
@@ -164,12 +165,23 @@ def get_existing_flood_geojson(product_id, output_file_path="./output/"):
     index_df = pd.read_csv(output_file_path + "index.csv")
     geojson_path = index_df[index_df["product"] == product_id].geojson_path.values[0]
 
-    # Combine multiple flood files into a FeatureGroup
-    flood_geojson_group = folium.FeatureGroup(name=product_id)
-
     with open(geojson_path, "r") as f:
         geojson_data = json.load(f)
-        flood_layer = folium.GeoJson(geojson_data)
-        flood_geojson_group.add_child(flood_layer)
 
-    return flood_geojson_group
+    return geojson_data
+
+
+def create_zipfile_buffer_from_geojsons(selected_geojsons):
+    # Create an in-memory zip file
+    zip_buffer = io.BytesIO()
+
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
+        for i, geojson in enumerate(selected_geojsons, start=1):
+            geojson_str = json.dumps(geojson)  # Convert GeoJSON to string
+            file_name = f"geojson_{i}.geojson"
+            zipf.writestr(file_name, geojson_str)
+
+    # Move the buffer cursor to the beginning so it can be read
+    zip_buffer.seek(0)
+
+    return zip_buffer
