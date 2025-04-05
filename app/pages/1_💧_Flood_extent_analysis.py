@@ -10,6 +10,7 @@ from src.utils import (
     create_zipfile_buffer_from_geojsons,
     get_aoi_id_from_selector_preview,
     get_existing_flood_geojson,
+    get_existing_footprint_geojson,
     set_tool_page_style,
     toggle_menu_button,
 )
@@ -18,6 +19,7 @@ from streamlit_folium import st_folium
 today = date.today()
 
 default_date_yesterday = today - timedelta(days=1)
+flood_featuregroup = None
 
 # Page configuration
 st.set_page_config(layout="wide", page_title=params["browser_title"])
@@ -193,9 +195,22 @@ with below_checkbox_col1:
     # If the button is clicked download all checked products that have not been downloaded yet
     if download_products:
         index_df = pd.read_csv("./output/index.csv")
-        for i, checkbox in enumerate(checkboxes):
-            if checkbox:
-                product_to_download = st.session_state["all_products"][i]
+        # Get selected time groups from the table
+        selected_time_groups = product_groups_st_df[product_groups_st_df["Check"]][
+            "Product time"
+        ].tolist()
+
+        # For each selected time group
+        for time_group in selected_time_groups:
+            # Get all products for this time group
+            products_in_group = [
+                p
+                for p in st.session_state["all_products"]
+                if p["product_time_group"] == time_group
+            ]
+
+            # Download each product in the group that hasn't been downloaded yet
+            for product_to_download in products_in_group:
                 if product_to_download["product_id"] not in index_df["product"].values:
                     with st.spinner(
                         f"Getting GFM files for {product_to_download['product_time']}, this may take a couple of minutes"
@@ -228,6 +243,7 @@ if st.session_state["all_products"]:
 
             # Create a feature group for this time group
             flood_featuregroup = folium.FeatureGroup(name=time_group)
+            footprint_featuregroup = folium.FeatureGroup(name="Sentinel footprint")
             group_has_features = False
 
             # Add all available products from this group to the feature group
@@ -236,22 +252,46 @@ if st.session_state["all_products"]:
                     # Get the raw geojsons for further usage in the app
                     flood_geojson = get_existing_flood_geojson(product["product_id"])
                     selected_geojsons.append(flood_geojson)
-
                     # Convert geojsons to folium features to display on the map
-                    flood_folium_geojson = folium.GeoJson(flood_geojson)
+                    flood_folium_geojson = folium.GeoJson(
+                        flood_geojson,
+                        style_function=lambda x: {
+                            "fillColor": "#ff0000",
+                            "color": "#ff0000",
+                            "fillOpacity": 0.2,
+                        },
+                    )
                     flood_featuregroup.add_child(flood_folium_geojson)
+
+                    footprint_geojson = get_existing_footprint_geojson(
+                        product["product_id"]
+                    )
+                    footprint_folium_geojson = folium.GeoJson(
+                        footprint_geojson,
+                        style_function=lambda x: {
+                            "fillColor": "yellow",
+                            "color": "yellow",
+                            "fillOpacity": 0.2,
+                            "weight": 0,
+                        },
+                    )
+                    footprint_featuregroup.add_child(footprint_folium_geojson)
                     group_has_features = True
 
             # Only add the feature group if it contains any features
             if group_has_features:
                 feature_groups.append(flood_featuregroup)
+                feature_groups.append(footprint_featuregroup)
 
 # Contains the map
 with col2_1:
     if selected_area_id:
         # display the bounding box
         bounding_box = st.session_state["all_aois"][selected_area_id]["bbox"]
-        geojson_selected_area = folium.GeoJson(bounding_box)
+        geojson_selected_area = folium.GeoJson(
+            bounding_box,
+            style_function=lambda x: {"fillOpacity": 0.2, "weight": 1},
+        )
         feat_group_selected_area = folium.FeatureGroup(name="selected_area")
         feat_group_selected_area.add_child(geojson_selected_area)
         feature_groups.append(feat_group_selected_area)
@@ -261,10 +301,33 @@ with col2_1:
     folium_map.fit_bounds(feat_group_selected_area.get_bounds())
 
     m = st_folium(
-        folium_map,
-        width=800,
-        height=450,
-        feature_group_to_add=feature_groups,
+        folium_map, width=800, height=450, feature_group_to_add=feature_groups
+    )
+
+    if flood_featuregroup:
+        flood_part_of_legend = """
+        <div style="display: flex; align-items: center;">
+            <div style="width: 20px; height: 20px; background:  rgba(255, 0, 0, .2); border: 1px solid red;"></div>
+            <div style="margin-left: 5px;">Floods</div>
+        </div>
+        <div style="display: flex; align-items: center;">
+            <div style="width: 20px; height: 20px; background:  rgba(255, 255, 0, .2); border: 1px solid yellow;"></div>
+            <div style="margin-left: 5px;">Sentinel Footprint</div>
+        </div>
+        """
+    else:
+        flood_part_of_legend = ""
+    st.markdown(
+        f"""
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <div style="display: flex; align-items: center;">
+                <div style="width: 20px; height: 20px; background:  rgba(51, 136, 255, .2); border: 1px solid #3388ff;"></div>
+                <div style="margin-left: 5px;">AOI</div>
+            </div>
+            {flood_part_of_legend}
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
 with below_checkbox_col2:

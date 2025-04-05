@@ -163,7 +163,24 @@ def get_existing_flood_geojson(product_id, output_file_path="./output/"):
     Getting a saved GFM flood geojson in an output folder of GFM files. Merge in one feature group if multiple.
     """
     index_df = pd.read_csv(output_file_path + "index.csv")
-    geojson_path = index_df[index_df["product"] == product_id].geojson_path.values[0]
+    geojson_path = index_df[
+        index_df["product"] == product_id
+    ].flood_geojson_path.values[0]
+
+    with open(geojson_path, "r") as f:
+        geojson_data = json.load(f)
+
+    return geojson_data
+
+
+def get_existing_footprint_geojson(product_id, output_file_path="./output/"):
+    """
+    Getting a saved GFM flood geojson in an output folder of GFM files. Merge in one feature group if multiple.
+    """
+    index_df = pd.read_csv(output_file_path + "index.csv")
+    geojson_path = index_df[
+        index_df["product"] == product_id
+    ].footprint_geojson_path.values[0]
 
     with open(geojson_path, "r") as f:
         geojson_data = json.load(f)

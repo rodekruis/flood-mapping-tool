@@ -108,6 +108,7 @@ class GFMHandler:
         r = requests.get(download_link)
         buffer = io.BytesIO(r.content)
 
+        # Extract flood geojson
         with zipfile.ZipFile(buffer, "r") as z:
             namelist = z.namelist()
             for name in namelist:
@@ -116,12 +117,19 @@ class GFMHandler:
                     break
             z.extract(flood_filename, output_file_path)
 
+            for name in namelist:
+                if "footprint" in name and ".geojson" in name:
+                    footprint_filename = name
+                    break
+            z.extract(footprint_filename, output_file_path)
+
         df = pd.DataFrame(
             {
                 "aoi_id": [area_id],
                 "datetime": [product_time],
                 "product": [product_id],
-                "geojson_path": [output_file_path + "/" + flood_filename],
+                "flood_geojson_path": [output_file_path + "/" + flood_filename],
+                "footprint_geojson_path": [output_file_path + "/" + footprint_filename],
             }
         )
 
