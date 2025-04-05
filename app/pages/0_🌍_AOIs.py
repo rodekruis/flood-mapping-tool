@@ -2,7 +2,7 @@ import folium
 import streamlit as st
 from folium.plugins import Draw
 from src.config_parameters import params
-from src.gfm import create_aoi, delete_aoi, retrieve_all_aois
+from src.gfm import GFMHandler
 from src.utils import (
     add_about,
     get_aoi_id_from_selector_preview,
@@ -20,6 +20,10 @@ toggle_menu_button()
 # Create sidebar
 add_about()
 
+# Initialize GFMHandler if not already in session state
+if "gfm_handler" not in st.session_state:
+    st.session_state["gfm_handler"] = GFMHandler()
+
 # Page title
 st.markdown("# AOIs")
 
@@ -34,7 +38,7 @@ if "prev_radio_selection" not in st.session_state:
     st.session_state["prev_radio_selection"] = "See Areas"
 
 if "all_aois" not in st.session_state:
-    st.session_state["all_aois"] = retrieve_all_aois()
+    st.session_state["all_aois"] = st.session_state["gfm_handler"].retrieve_all_aois()
 
 
 feat_group_selected_area = folium.FeatureGroup(name="selected_area")
@@ -51,7 +55,9 @@ folium_map = folium.Map([39, 0], zoom_start=8)
 # Collecting AOIs is done on first page load and when switching from a different radio selection back to See Areas
 if radio_selection == "See Areas":
     if st.session_state["prev_radio_selection"] != "See Areas":
-        st.session_state["all_aois"] = retrieve_all_aois()
+        st.session_state["all_aois"] = st.session_state[
+            "gfm_handler"
+        ].retrieve_all_aois()
 
     # Add each AOI as a feature group to the map
     for aoi in st.session_state["all_aois"].values():
@@ -101,7 +107,7 @@ elif radio_selection == "Delete Area":
 
     # If clicked will delete both from API and the session state to also remove from the Delete Area selector
     if delete_area:
-        delete_aoi(selected_area_id)
+        st.session_state["gfm_handler"].delete_aoi(selected_area_id)
         st.session_state["all_aois"].pop(selected_area_id, None)
         st.toast("Area successfully deleted")
         st.rerun()
@@ -128,7 +134,7 @@ if save_area:
         print("starting to post new area name to gfm api")
         coordinates = selected_area_geojson["geometry"]["coordinates"]
 
-        create_aoi(new_area_name, coordinates)
+        st.session_state["gfm_handler"].create_aoi(new_area_name, coordinates)
         st.toast("Area successfully created")
 
 st.session_state["prev_page"] = "aois"

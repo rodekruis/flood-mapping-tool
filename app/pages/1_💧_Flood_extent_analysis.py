@@ -4,11 +4,7 @@ import folium
 import pandas as pd
 import streamlit as st
 from src.config_parameters import params
-from src.gfm import (
-    download_flood_product,
-    get_area_products,
-    retrieve_all_aois,
-)
+from src.gfm import GFMHandler
 from src.utils import (
     add_about,
     create_zipfile_buffer_from_geojsons,
@@ -32,6 +28,10 @@ toggle_menu_button()
 # Create sidebar
 add_about()
 
+# Initialize GFMHandler if not already in session state
+if "gfm_handler" not in st.session_state:
+    st.session_state["gfm_handler"] = GFMHandler()
+
 # Page title
 st.markdown("# Flood extent analysis")
 
@@ -47,14 +47,14 @@ col2_1, col2_2 = row2.columns([3, 2])
 
 # Retrieve AOIs to fill AOI selector
 if "all_aois" not in st.session_state:
-    st.session_state["all_aois"] = retrieve_all_aois()
+    st.session_state["all_aois"] = st.session_state["gfm_handler"].retrieve_all_aois()
 
 # If coming from a different page, all aois may be filled but not up to date, retrigger
 if "prev_page" not in st.session_state:
     st.session_state["prev_page"] = "flood_extent"
 
 if st.session_state["prev_page"] != "flood_extent":
-    st.session_state["all_aois"] = retrieve_all_aois()
+    st.session_state["all_aois"] = st.session_state["gfm_handler"].retrieve_all_aois()
 
 if "all_products" not in st.session_state:
     st.session_state["all_products"] = None
@@ -105,7 +105,9 @@ with col4:
 # If button above is triggered, get products from GFM
 # Then save all products to the session state and rerun the app to display them
 if show_available_products:
-    products = get_area_products(selected_area_id, start_date, end_date)
+    products = st.session_state["gfm_handler"].get_area_products(
+        selected_area_id, start_date, end_date
+    )
     st.session_state["all_products"] = products
     st.rerun()
 
@@ -153,7 +155,9 @@ with below_checkbox_col1:
                     with st.spinner(
                         f"Getting GFM files for {product_to_download['product_time']}, this may take a couple of minutes"
                     ):
-                        download_flood_product(selected_area_id, product_to_download)
+                        st.session_state["gfm_handler"].download_flood_product(
+                            selected_area_id, product_to_download
+                        )
         st.rerun()
 
 # For all the selected products add them to the map if they are available

@@ -2,6 +2,7 @@
 
 import streamlit as st
 from src.config_parameters import params
+from src.gfm import GFMHandler
 
 # Page configuration
 st.set_page_config(layout="wide", page_title=params["browser_title"])
@@ -14,6 +15,10 @@ from src.utils import (
 
 # If app is deployed hide menu button
 toggle_menu_button()
+
+# Initialize GFMHandler if not already in session state
+if "gfm_handler" not in st.session_state:
+    st.session_state["gfm_handler"] = GFMHandler()
 
 # Create sidebar
 add_about()
