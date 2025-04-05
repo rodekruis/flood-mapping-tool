@@ -117,16 +117,61 @@ with col2_2:
     row_buttons = st.container()
 
 with row_checkboxes:
+    # Initialize empty lists for checkbox states
     checkboxes = list()
     # Products are checked against the index to check whether they are already downloaded
     index_df = pd.read_csv("./output/index.csv")
     if st.session_state["all_products"]:
+        # Get unique product time groups
+        unique_time_groups = set()
         for product in st.session_state["all_products"]:
-            suffix = ""
-            if product["product_id"] in index_df["product"].values:
-                suffix = " - Available in Floodmap"
-            checkbox = st.checkbox(product["product_time"] + suffix)
-            checkboxes.append(checkbox)
+            unique_time_groups.add(product["product_time_group"])
+
+        # Create dataframe for the table
+        product_data = []
+        for time_group in sorted(unique_time_groups):
+            # Check if any product in this group is already downloaded
+            products_in_group = [
+                p
+                for p in st.session_state["all_products"]
+                if p["product_time_group"] == time_group
+            ]
+            available_status = ""
+            if any(
+                p["product_id"] in index_df["product"].values for p in products_in_group
+            ):
+                available_status = "Available in Floodmap"
+
+            product_data.append(
+                {
+                    "Check": False,
+                    "Product time": time_group,
+                    "Available": available_status,
+                }
+            )
+
+        product_groups_df = pd.DataFrame(product_data)
+
+        # Create the data editor with checkbox column
+        product_groups_st_df = st.data_editor(
+            product_groups_df,
+            column_config={
+                "Check": st.column_config.CheckboxColumn(
+                    "Select",
+                    help="Select products to process",
+                    default=False,
+                ),
+                "Product time": st.column_config.TextColumn(
+                    "Product Time Group", disabled=True
+                ),
+                "Available": st.column_config.TextColumn("Status", disabled=True),
+            },
+            hide_index=True,
+            disabled=["Product time", "Available"],
+        )
+
+        # Convert checkbox states to list for compatibility with existing code
+        checkboxes = product_groups_st_df["Check"].tolist()
 
 with row_buttons:
     below_checkbox_col1, below_checkbox_col2 = row_buttons.columns([1, 1])
@@ -165,18 +210,40 @@ feature_groups = []
 selected_geojsons = []
 if st.session_state["all_products"]:
     index_df = pd.read_csv("./output/index.csv")
+    # Get unique time groups
+    unique_time_groups = sorted(
+        set(p["product_time_group"] for p in st.session_state["all_products"])
+    )
+
+    # For each checkbox (which corresponds to a time group)
     for i, checkbox in enumerate(checkboxes):
         if checkbox:
-            product_id = st.session_state["all_products"][i]["product_id"]
-            flood_featuregroup = folium.FeatureGroup(name=product_id)
-            if product_id in index_df["product"].values:
-                # Get the raw geojsons for further usage in the app
-                flood_geojson = get_existing_flood_geojson(product_id)
-                selected_geojsons.append(flood_geojson)
+            time_group = unique_time_groups[i]
+            # Get all products for this time group
+            products_in_group = [
+                p
+                for p in st.session_state["all_products"]
+                if p["product_time_group"] == time_group
+            ]
 
-                # Convert geojsons to folium features to display on the map
-                flood_folium_geojson = folium.GeoJson(flood_geojson)
-                flood_featuregroup.add_child(flood_folium_geojson)
+            # Create a feature group for this time group
+            flood_featuregroup = folium.FeatureGroup(name=time_group)
+            group_has_features = False
+
+            # Add all available products from this group to the feature group
+            for product in products_in_group:
+                if product["product_id"] in index_df["product"].values:
+                    # Get the raw geojsons for further usage in the app
+                    flood_geojson = get_existing_flood_geojson(product["product_id"])
+                    selected_geojsons.append(flood_geojson)
+
+                    # Convert geojsons to folium features to display on the map
+                    flood_folium_geojson = folium.GeoJson(flood_geojson)
+                    flood_featuregroup.add_child(flood_folium_geojson)
+                    group_has_features = True
+
+            # Only add the feature group if it contains any features
+            if group_has_features:
                 feature_groups.append(flood_featuregroup)
 
 # Contains the map

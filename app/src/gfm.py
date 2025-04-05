@@ -1,6 +1,7 @@
 import io
 import os
 import zipfile
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pandas as pd
@@ -61,6 +62,29 @@ class GFMHandler:
         response = self._make_request("GET", prod_url, params=params)
         products = response.json()["products"]
         print(f"Found {len(products)} products for {area_id}")
+
+        # Sort products by timestamp
+        products.sort(key=lambda x: x["product_time"])
+
+        # Group products that are within 1 minute of each other
+        if products:
+            current_group_time = products[0]["product_time"]
+            products[0]["product_time_group"] = current_group_time
+
+            for i in range(1, len(products)):
+                product_time = datetime.fromisoformat(
+                    products[i]["product_time"].replace("Z", "+00:00")
+                )
+                current_time = datetime.fromisoformat(
+                    current_group_time.replace("Z", "+00:00")
+                )
+                time_diff = product_time - current_time
+
+                # If more than 1 minute apart, start a new group
+                if time_diff > timedelta(minutes=1):
+                    current_group_time = products[i]["product_time"]
+
+                products[i]["product_time_group"] = current_group_time
 
         return products
 
