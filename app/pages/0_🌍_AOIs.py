@@ -61,7 +61,13 @@ if radio_selection == "See Areas":
 
     # Add each AOI as a feature group to the map
     for aoi in st.session_state["all_aois"].values():
-        feat_group_selected_area.add_child(folium.GeoJson(aoi["bbox"]))
+        feat_group_selected_area.add_child(
+            folium.GeoJson(
+                aoi["bbox"],
+                tooltip=aoi["name"],
+                style_function=lambda x: {"fillOpacity": 0.2, "weight": 1}
+            )
+        )
 
     folium_map.fit_bounds(feat_group_selected_area.get_bounds())
     st.session_state["prev_radio_selection"] = "See Areas"
