@@ -80,6 +80,15 @@ elif radio_selection == "Create New Area":
         },
     ).add_to(folium_map)
 
+    # Add geocoder search bar
+    from folium.plugins import Geocoder
+    Geocoder(
+        position="topleft",
+        collapsed=True,
+        add_marker=False, # ! Adding a marker messes up the area selection tool
+        zoom=10
+    ).add_to(folium_map)
+
     new_area_name = st.text_input("Area name")
     
     # Check if the name already exists
