@@ -80,8 +80,16 @@ elif radio_selection == "Create New Area":
         },
     ).add_to(folium_map)
 
-    new_area_name = st.text_input("Area name")
-    save_area = st.button("Save Area")
+    new_area_name = st.text_input("Area name") #TODO: this is where we need to enforce unique AOI names
+    
+    # Check if the name already exists
+    existing_names = [aoi["name"] for aoi in st.session_state["all_aois"].values()]
+    is_name_valid = new_area_name and new_area_name not in existing_names
+    
+    if new_area_name and not is_name_valid:
+        st.error(f"An area with the name '{new_area_name}' already exists. Please choose a different name.")
+    
+    save_area = st.button("Save Area", disabled=not is_name_valid)
 
     st.session_state["prev_radio_selection"] = "Create New Area"
 
