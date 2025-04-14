@@ -59,7 +59,18 @@ if radio_selection == "See Areas":
             folium.GeoJson(
                 aoi["bbox"],
                 tooltip=aoi["name"],
-                style_function=lambda x: {"fillOpacity": 0.2, "weight": 1}
+                style_function=lambda x: {
+                    "fillColor": "#3388ff",
+                    "color": "#3388ff",
+                    "fillOpacity": 0.2,
+                    "weight": 1
+                },
+                highlight_function=lambda x: {
+                    "fillColor": "#3388ff",
+                    "color": "#3388ff",
+                    "fillOpacity": 0.5,
+                    "weight": 3
+                }
             )
         )
 
