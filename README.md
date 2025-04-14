@@ -4,6 +4,7 @@ emoji: 👀
 colorFrom: yellow
 colorTo: purple
 sdk: streamlit
+python_version: 3.12
 sdk_version: 1.44.1
 app_file: app/Home.py
 pinned: false
@@ -23,4 +24,4 @@ streamlit run app/Home.py
 ```
 
 ## Project
-TODO: Add more complete documentation. 
+TODO: Add more complete documentation.
