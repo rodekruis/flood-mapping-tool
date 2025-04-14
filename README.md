@@ -5,7 +5,7 @@ colorFrom: yellow
 colorTo: purple
 sdk: streamlit
 sdk_version: 1.44.1
-app_file: app.py
+app_file: app/Home.py
 pinned: false
 license: gpl-3.0
 ---
