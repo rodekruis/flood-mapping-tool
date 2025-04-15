@@ -169,10 +169,12 @@ def get_existing_flood_geojson(product_id):
     flood_geojson_group = folium.FeatureGroup(name=product_id)
 
     hf_api = hf_utils.get_hf_api()
+    subfolder, filename = path_in_repo.split("/")
     geojson_path = hf_api.hf_hub_download(
         repo_id="rodekruis/flood-mapping",
-        path_in_repo=path_in_repo,
+        filename=filename,
         repo_type="dataset",
+        subfolder=subfolder,
     )
 
     with open(geojson_path, "r") as f:
