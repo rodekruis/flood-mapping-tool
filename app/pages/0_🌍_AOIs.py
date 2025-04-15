@@ -33,9 +33,6 @@ save_area = False
 if "prev_radio_selection" not in st.session_state:
     st.session_state["prev_radio_selection"] = "See Areas"
 
-if "all_aois" not in st.session_state:
-    st.session_state["all_aois"] = retrieve_all_aois()
-
 
 feat_group_selected_area = folium.FeatureGroup(name="selected_area")
 radio_selection = st.radio(
@@ -47,14 +44,13 @@ radio_selection = st.radio(
 # call to render Folium map in Streamlit
 folium_map = folium.Map([39, 0], zoom_start=8)
 
+aois = retrieve_all_aois()
+
 # See Areas will show all areas collected from GFM.
 # Collecting AOIs is done on first page load and when switching from a different radio selection back to See Areas
 if radio_selection == "See Areas":
-    if st.session_state["prev_radio_selection"] != "See Areas":
-        st.session_state["all_aois"] = retrieve_all_aois()
-
     # Add each AOI as a feature group to the map
-    for aoi in st.session_state["all_aois"].values():
+    for aoi in aois.values():
         feat_group_selected_area.add_child(
             folium.GeoJson(
                 aoi["bbox"],
@@ -104,7 +100,7 @@ elif radio_selection == "Create New Area":
     new_area_name = st.text_input("Area name")
 
     # Check if the name already exists
-    existing_names = [aoi["name"] for aoi in st.session_state["all_aois"].values()]
+    existing_names = [aoi["name"] for aoi in aois.values()]
     is_name_valid = new_area_name and new_area_name not in existing_names
 
     if new_area_name and not is_name_valid:
@@ -118,18 +114,14 @@ elif radio_selection == "Create New Area":
 
 # Delete area does exactly that, it will show the selected area and a delete button
 elif radio_selection == "Delete Area":
-    existing_areas = [
-        aoi["name_id_preview"] for aoi in st.session_state["all_aois"].values()
-    ]
+    existing_areas = [aoi["name_id_preview"] for aoi in aois.values()]
 
     area_to_delete_name_id = st.selectbox(
         "Choose area to delete", options=existing_areas
     )
-    selected_area_id = get_aoi_id_from_selector_preview(
-        st.session_state["all_aois"], area_to_delete_name_id
-    )
+    selected_area_id = get_aoi_id_from_selector_preview(aois, area_to_delete_name_id)
 
-    bbox = st.session_state["all_aois"][selected_area_id]["bbox"]
+    bbox = aois[selected_area_id]["bbox"]
     feat_group_selected_area.add_child(folium.GeoJson(bbox))
     folium_map.fit_bounds(feat_group_selected_area.get_bounds())
 
@@ -138,10 +130,25 @@ elif radio_selection == "Delete Area":
 
     # If clicked will delete both from API and the session state to also remove from the Delete Area selector
     if delete_area:
-        delete_aoi(selected_area_id)
-        st.session_state["all_aois"].pop(selected_area_id, None)
-        st.toast("Area successfully deleted")
-        st.rerun()
+
+        @st.dialog(title="Confirm Delete")
+        def confirm_delete():
+            aoi_name = aois[selected_area_id]["name"]
+            st.write(
+                f"If you are sure you want to delete this area, enter the area name below. ({aoi_name})"
+            )
+            confirm_delete = st.text_input("Enter area name")
+            if st.button("Confirm"):
+                if confirm_delete == aoi_name:
+                    delete_aoi(selected_area_id)
+                    retrieve_all_aois.clear()
+                    st.toast("Area successfully deleted")
+                    st.rerun()
+                else:
+                    st.error("Area name does not match")
+
+        confirm_delete()
+
 
 # Create map with features based on the radio selector handling above
 m = st_folium(

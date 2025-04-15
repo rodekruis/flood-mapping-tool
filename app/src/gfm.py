@@ -111,6 +111,7 @@ def download_flood_product(area_id, product, output_file_path=None):
 
 
 # Gets all AOIs and transforms them to a dict with some features that are useful in the app, like the bbox
+@st.cache_resource
 def retrieve_all_aois():
     print("Retrieving all AOIs from GFM API")
     user_id, access_token = get_gfm_user_and_token()

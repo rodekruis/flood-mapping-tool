@@ -45,12 +45,8 @@ col1, col2, col3, col4, col5 = row1.columns([1, 1, 1, 1, 1])
 col2_1, col2_2 = row2.columns([3, 2])
 
 # Retrieve AOIs to fill AOI selector
-if "all_aois" not in st.session_state:
-    st.session_state["all_aois"] = retrieve_all_aois()
+aois = retrieve_all_aois()
 
-# If coming from a different page, all aois may be filled but not up to date, retrigger
-if st.session_state.get("prev_page") != "flood_extent":
-    st.session_state["all_aois"] = retrieve_all_aois()
 
 if "all_products" not in st.session_state:
     st.session_state["all_products"] = None
@@ -66,15 +62,11 @@ def on_area_selector_change():
 with col1:
     selected_area_name_id = st.selectbox(
         "Select saved AOI",
-        options=[
-            aoi["name_id_preview"] for aoi in st.session_state["all_aois"].values()
-        ],
+        options=[aoi["name_id_preview"] for aoi in aois.values()],
         on_change=on_area_selector_change,
     )
 
-    selected_area_id = get_aoi_id_from_selector_preview(
-        st.session_state["all_aois"], selected_area_name_id
-    )
+    selected_area_id = get_aoi_id_from_selector_preview(aois, selected_area_name_id)
 
 # Contain datepickers
 with col2:
@@ -159,7 +151,7 @@ if st.session_state["all_products"]:
 with col2_1:
     if selected_area_id:
         # display the bounding box
-        bounding_box = st.session_state["all_aois"][selected_area_id]["bbox"]
+        bounding_box = aois[selected_area_id]["bbox"]
         geojson_selected_area = folium.GeoJson(bounding_box)
         feat_group_selected_area = folium.FeatureGroup(name="selected_area")
         feat_group_selected_area.add_child(geojson_selected_area)
