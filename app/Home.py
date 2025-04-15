@@ -6,7 +6,7 @@ from src.config_parameters import params
 # Page configuration
 st.set_page_config(layout="wide", page_title=params["browser_title"])
 
-from src.utils import (
+from src.utils import (  # noqa: E402
     add_about,
     set_home_page_style,
     toggle_menu_button,

@@ -5,13 +5,15 @@ from pathlib import Path
 
 import pandas as pd
 import requests
+import streamlit as st
 from dotenv import load_dotenv
+
+from src import hf_utils
 
 load_dotenv()
 
 
-# TODO: These functions should be transformed into a proper class mainly to prevent authentication on each call
-# Authentication
+@st.cache_resource
 def get_gfm_user_and_token():
     username = os.environ["gfm_username"]
     password = os.environ["gfm_password"]
@@ -75,30 +77,35 @@ def download_flood_product(area_id, product, output_file_path=None):
     # Download and unzip file
     r = requests.get(download_link)
     buffer = io.BytesIO(r.content)
+    hf_api = hf_utils.get_hf_api()
 
     with zipfile.ZipFile(buffer, "r") as z:
         namelist = z.namelist()
         for name in namelist:
             if "FLOOD" in name and ".geojson" in name:
                 flood_filename = name
+                path_in_repo = f"flood-geojson/{flood_filename}"
                 break
-        z.extract(flood_filename, output_file_path)
+        with z.open(flood_filename) as f:
+            hf_api.upload_file(
+                path_or_fileobj=f,
+                path_in_repo=path_in_repo,
+                repo_id="rodekruis/flood-mapping",
+                repo_type="dataset",
+            )
 
     df = pd.DataFrame(
         {
             "aoi_id": [area_id],
             "datetime": [product_time],
             "product": [product_id],
-            "geojson_path": [output_file_path + "/" + flood_filename],
+            "path_in_repo": [path_in_repo],
         }
     )
 
-    index_file_path = Path(f"{output_file_path}/index.csv")
-    if index_file_path.is_file():
-        existing_df = pd.read_csv(index_file_path)
-        df = pd.concat([existing_df, df])
-
-    df.to_csv(index_file_path, index=False)
+    index_df = hf_utils.get_geojson_index_df()
+    index_df = pd.concat([index_df, df], ignore_index=True)
+    hf_utils.update_geojson_index_df(index_df)
 
     print(f"Product {product_id} downloaded succesfully")
 
@@ -147,6 +154,7 @@ def create_aoi(new_area_name, coordinates):
     }
 
     r = requests.post(url=create_aoi_url, json=payload, headers=header)
+    r.raise_for_status()
     print("Posted new AOI")
 
 
@@ -163,4 +171,5 @@ def delete_aoi(aoi_id):
     print(delete_aoi_url)
 
     r = requests.delete(url=delete_aoi_url, headers=header)
+    r.raise_for_status()
     print("AOI deleted")

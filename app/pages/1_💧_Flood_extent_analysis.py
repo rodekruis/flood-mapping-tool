@@ -1,8 +1,8 @@
 from datetime import date, timedelta
 
 import folium
-import pandas as pd
 import streamlit as st
+from src import hf_utils
 from src.config_parameters import params
 from src.gfm import (
     download_flood_product,
@@ -49,7 +49,7 @@ if "all_aois" not in st.session_state:
     st.session_state["all_aois"] = retrieve_all_aois()
 
 # If coming from a different page, all aois may be filled but not up to date, retrigger
-if st.session_state["prev_page"] != "flood_extent":
+if st.session_state.get("prev_page") != "flood_extent":
     st.session_state["all_aois"] = retrieve_all_aois()
 
 if "all_products" not in st.session_state:
@@ -109,7 +109,7 @@ if show_available_products:
 with col2_2:
     checkboxes = list()
     # Products are checked against the index to check whether they are already downloaded
-    index_df = pd.read_csv("./output/index.csv")
+    index_df = hf_utils.get_geojson_index_df()
     if st.session_state["all_products"]:
         for product in st.session_state["all_products"]:
             suffix = ""
@@ -133,7 +133,7 @@ with col5:
 
     # If the button is clicked download all checked products that have not been downloaded yet
     if download_products:
-        index_df = pd.read_csv("./output/index.csv")
+        index_df = hf_utils.get_geojson_index_df()
         for i, checkbox in enumerate(checkboxes):
             if checkbox:
                 product_to_download = st.session_state["all_products"][i]
@@ -147,7 +147,7 @@ with col5:
 # For all the selected products add them to the map if they are available
 feature_groups = []
 if st.session_state["all_products"]:
-    index_df = pd.read_csv("./output/index.csv")
+    index_df = hf_utils.get_geojson_index_df()
     for i, checkbox in enumerate(checkboxes):
         if checkbox:
             product_id = st.session_state["all_products"][i]["product_id"]

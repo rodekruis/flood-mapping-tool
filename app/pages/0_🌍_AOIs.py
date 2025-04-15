@@ -63,14 +63,14 @@ if radio_selection == "See Areas":
                     "fillColor": "#3388ff",
                     "color": "#3388ff",
                     "fillOpacity": 0.2,
-                    "weight": 1
+                    "weight": 1,
                 },
                 highlight_function=lambda x: {
                     "fillColor": "#3388ff",
                     "color": "#3388ff",
                     "fillOpacity": 0.5,
-                    "weight": 3
-                }
+                    "weight": 3,
+                },
             )
         )
 
@@ -93,22 +93,25 @@ elif radio_selection == "Create New Area":
 
     # Add geocoder search bar
     from folium.plugins import Geocoder
+
     Geocoder(
         position="topleft",
         collapsed=True,
-        add_marker=False, # ! Adding a marker messes up the area selection tool
-        zoom=10
+        add_marker=False,  # ! Adding a marker messes up the area selection tool
+        zoom=10,
     ).add_to(folium_map)
 
     new_area_name = st.text_input("Area name")
-    
+
     # Check if the name already exists
     existing_names = [aoi["name"] for aoi in st.session_state["all_aois"].values()]
     is_name_valid = new_area_name and new_area_name not in existing_names
-    
+
     if new_area_name and not is_name_valid:
-        st.error(f"An area with the name '{new_area_name}' already exists. Please choose a different name.")
-    
+        st.error(
+            f"An area with the name '{new_area_name}' already exists. Please choose a different name."
+        )
+
     save_area = st.button("Save Area", disabled=not is_name_valid)
 
     st.session_state["prev_radio_selection"] = "Create New Area"
