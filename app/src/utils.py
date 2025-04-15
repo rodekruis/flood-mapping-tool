@@ -157,7 +157,6 @@ def add_about():
     )
 
 
-@st.cache_resource
 def get_existing_flood_geojson(product_id):
     """
     Getting a saved GFM flood geojson in an output folder of GFM files. Merge in one feature group if multiple.
