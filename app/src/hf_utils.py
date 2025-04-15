@@ -14,15 +14,15 @@ def get_hf_api():
 def get_geojson_index_df():
     hf_api = get_hf_api()
     try:
-        csv_path = hf_api.hf_hub_download(
+        index_path = hf_api.hf_hub_download(
             repo_id="rodekruis/flood-mapping",
-            filename="index.csv",
+            filename="index.parquet",
             repo_type="dataset",
             force_download=True,
         )
-        return pd.read_csv(csv_path)
+        return pd.read_parquet(index_path)
     except Exception as e:
-        st.warning(f"No index.csv found on Hugging Face: {e}")
+        st.warning(f"No index.parquet found on Hugging Face: {e}")
         return pd.DataFrame(columns=["aoi_id", "datetime", "product", "path_in_repo"])
 
 
