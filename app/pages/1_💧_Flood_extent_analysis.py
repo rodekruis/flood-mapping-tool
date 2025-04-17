@@ -120,7 +120,7 @@ with row_checkboxes:
                 if p["product_time_group"] == time_group
             ]
 
-            available_status = ""
+            dataset_link = ""
             for product in products_in_group:
                 if product["product_id"] in index_df["product"].values:
                     available_status = "Available in Floodmap"
@@ -152,9 +152,7 @@ with row_checkboxes:
                 "Product time": st.column_config.TextColumn(
                     "Product Time Group", disabled=True
                 ),
-                "Available": st.column_config.LinkColumn(
-                    "Available in dataset", display_text="Dataset link"
-                ),
+                "Available": st.column_config.LinkColumn("Available in dataset"),
             },
             hide_index=True,
             disabled=["Product time", "Available"],
@@ -210,6 +208,7 @@ with below_checkbox_col1:
 
 # For all the selected products add them to the map if they are available
 feature_groups = []
+flood_featuregroup = None
 selected_geojsons = []
 if st.session_state["all_products"]:
     index_df = hf_utils.get_geojson_index_df()
