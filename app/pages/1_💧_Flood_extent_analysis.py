@@ -128,7 +128,7 @@ with row_checkboxes:
                         index_df["product"] == product["product_id"],
                         "flood_geojson_path",
                     ].values[0]
-                    dataset_link = f"https://huggingface.co/datasets/rodekruis/flood-mapping/resolve/main/{flood_geojson_path}"
+                    dataset_link = f"https://huggingface.co/datasets/rodekruis/flood-mapping/resolve/main/{flood_geojson_path}?download=true"
 
             product_data.append(
                 {
