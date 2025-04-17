@@ -6,7 +6,7 @@ from huggingface_hub import HfApi
 
 
 @st.cache_resource
-def get_hf_api():
+def get_hf_api() -> HfApi:
     return HfApi()
 
 

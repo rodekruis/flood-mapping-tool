@@ -2,7 +2,7 @@ import folium
 import streamlit as st
 from folium.plugins import Draw
 from src.config_parameters import params
-from src.gfm import create_aoi, delete_aoi, retrieve_all_aois
+from src.gfm import get_cached_aois, get_cached_gfm_handler
 from src.utils import (
     add_about,
     get_aoi_id_from_selector_preview,
@@ -44,7 +44,8 @@ radio_selection = st.radio(
 # call to render Folium map in Streamlit
 folium_map = folium.Map([39, 0], zoom_start=8)
 
-aois = retrieve_all_aois()
+gfm = get_cached_gfm_handler()
+aois = get_cached_aois()
 
 # See Areas will show all areas collected from GFM.
 # Collecting AOIs is done on first page load and when switching from a different radio selection back to See Areas
@@ -140,8 +141,8 @@ elif radio_selection == "Delete Area":
             confirm_delete = st.text_input("Enter area name")
             if st.button("Confirm"):
                 if confirm_delete == aoi_name:
-                    delete_aoi(selected_area_id)
-                    retrieve_all_aois.clear()
+                    gfm.delete_aoi(selected_area_id)
+                    get_cached_aois.clear()
                     st.toast("Area successfully deleted")
                     st.rerun()
                 else:
@@ -172,7 +173,7 @@ if save_area:
         print("starting to post new area name to gfm api")
         coordinates = selected_area_geojson["geometry"]["coordinates"]
 
-        create_aoi(new_area_name, coordinates)
+        gfm.create_aoi(new_area_name, coordinates)
         st.toast("Area successfully created")
 
 st.session_state["prev_page"] = "aois"
