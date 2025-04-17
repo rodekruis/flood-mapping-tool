@@ -2,8 +2,8 @@
 
 import json
 import os
+from typing import Literal
 
-import folium
 import streamlit as st
 
 from src import hf_utils
@@ -157,15 +157,14 @@ def add_about():
     )
 
 
-def get_existing_flood_geojson(product_id):
+def get_existing_geojson(product_id, file_type: Literal["flood", "footprint"]):
     """
     Getting a saved GFM flood geojson in an output folder of GFM files. Merge in one feature group if multiple.
     """
     index_df = hf_utils.get_geojson_index_df()
-    path_in_repo = index_df[index_df["product"] == product_id].path_in_repo.values[0]
-
-    # Combine multiple flood files into a FeatureGroup
-    flood_geojson_group = folium.FeatureGroup(name=product_id)
+    path_in_repo = index_df[index_df["product"] == product_id][
+        f"{file_type}_geojson_path"
+    ].values[0]
 
     hf_api = hf_utils.get_hf_api()
     subfolder, filename = path_in_repo.split("/")
@@ -178,7 +177,5 @@ def get_existing_flood_geojson(product_id):
 
     with open(geojson_path, "r") as f:
         geojson_data = json.load(f)
-        flood_layer = folium.GeoJson(geojson_data)
-        flood_geojson_group.add_child(flood_layer)
 
-    return flood_geojson_group
+    return geojson_data
