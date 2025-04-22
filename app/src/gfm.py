@@ -191,6 +191,7 @@ class GFMHandler:
         }
 
         self._make_request("POST", create_aoi_url, json=payload)
+        get_cached_aois.clear()
         print("Posted new AOI")
 
     def delete_aoi(self, aoi_id):
@@ -199,6 +200,7 @@ class GFMHandler:
         print(delete_aoi_url)
 
         self._make_request("DELETE", delete_aoi_url)
+        get_cached_aois.clear()
         print("AOI deleted")
 
 
