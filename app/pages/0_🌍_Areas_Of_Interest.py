@@ -21,7 +21,7 @@ toggle_menu_button()
 add_about()
 
 # Page title
-st.markdown("# AOIs")
+st.markdown("# Areas Of Interest")
 
 # Set page style
 set_tool_page_style()

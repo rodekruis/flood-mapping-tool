@@ -8,7 +8,7 @@ params = {
         "Daniele": "dcastellana@redcross.nl",
     },
     # Urls
-    "url_github_repo": "https://github.com/mapaction/flood-extent-tool",
+    "url_github_repo": "https://github.com/rodekruis/flood-mapping-tool",
     "url_sentinel_dataset": (
         "https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S1_GRD"
     ),

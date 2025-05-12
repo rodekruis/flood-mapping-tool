@@ -58,13 +58,13 @@ def on_area_selector_change():
 
 # Contains AOI selector
 with col1:
-    selected_area_name_id = st.selectbox(
-        "Select saved AOI",
-        options=[aoi["name_id_preview"] for aoi in aois.values()],
+    selected_area_name = st.selectbox(
+        "Select saved area (AOI)",
+        options=[aoi["name"] for aoi in aois.values()],
         on_change=on_area_selector_change,
     )
 
-    selected_area_id = get_aoi_id_from_selector_preview(aois, selected_area_name_id)
+    selected_area_id = get_aoi_id_from_selector_preview(aois, selected_area_name)
 
 # Contain datepickers
 with col2:
@@ -86,7 +86,7 @@ with col4:
     it will not trigger any product downloads.
     """,
     )
-    show_available_products = st.button("Show GFM products")
+    show_available_products = st.button("Show available products")
 
 # If button above is triggered, get products from GFM
 # Then save all products to the session state and rerun the app to display them
@@ -166,45 +166,49 @@ with row_buttons:
 
 # Contains the "Download Products" button
 with below_checkbox_col1:
-    st.text(
-        "Button info",
-        help=""
-        """
-    Will download the selected products from GFM to the Floodmap app
-    (click "Show available products" first if there are none).
-    Products that show that they have already been downloaded can be left checked,
-    they will be skipped.
-    """,
-    )
-    download_products = st.button("Download to Floodmap")
+    if st.session_state["all_products"]:
+        st.text(
+            "Button info",
+            help=""
+            """
+        Will download the selected products from GFM to the Floodmap app
+        (click "Show available products" first if there are none).
+        Products that show that they have already been downloaded can be left checked,
+        they will be skipped.
+        """,
+        )
+        download_products = st.button("Download product to tool")
 
-    # If the button is clicked download all checked products that have not been downloaded yet
-    if download_products:
-        index_df = hf_utils.get_geojson_index_df()
-        # Get selected time groups from the table
-        selected_time_groups = product_groups_st_df[product_groups_st_df["Check"]][
-            "Product time"
-        ].tolist()
+        # If the button is clicked download all checked products that have not been downloaded yet
+        if download_products:
+            index_df = hf_utils.get_geojson_index_df()
+            # Get selected time groups from the table
+            selected_time_groups = product_groups_st_df[product_groups_st_df["Check"]][
+                "Product time"
+            ].tolist()
 
-        # For each selected time group
-        for time_group in selected_time_groups:
-            # Get all products for this time group
-            products_in_group = [
-                p
-                for p in st.session_state["all_products"]
-                if p["product_time_group"] == time_group
-            ]
+            # For each selected time group
+            for time_group in selected_time_groups:
+                # Get all products for this time group
+                products_in_group = [
+                    p
+                    for p in st.session_state["all_products"]
+                    if p["product_time_group"] == time_group
+                ]
 
-            # Download each product in the group that hasn't been downloaded yet
-            for product_to_download in products_in_group:
-                if product_to_download["product_id"] not in index_df["product"].values:
-                    with st.spinner(
-                        f"Getting GFM files for {product_to_download['product_time']}, this may take a couple of minutes"
+                # Download each product in the group that hasn't been downloaded yet
+                for product_to_download in products_in_group:
+                    if (
+                        product_to_download["product_id"]
+                        not in index_df["product"].values
                     ):
-                        gfm.download_flood_product(
-                            selected_area_id, product_to_download
-                        )
-        st.rerun()
+                        with st.spinner(
+                            f"Getting GFM files for {product_to_download['product_time']}, this may take a couple of minutes"
+                        ):
+                            gfm.download_flood_product(
+                                selected_area_id, product_to_download
+                            )
+            st.rerun()
 
 # For all the selected products add them to the map if they are available
 feature_groups = []
@@ -309,7 +313,7 @@ with col2_1:
         <div style="display: flex; align-items: center; gap: 20px;">
             <div style="display: flex; align-items: center;">
                 <div style="width: 20px; height: 20px; background:  rgba(51, 136, 255, .2); border: 1px solid #3388ff;"></div>
-                <div style="margin-left: 5px;">AOI</div>
+                <div style="margin-left: 5px;">Area Of Interest</div>
             </div>
             {flood_part_of_legend}
         </div>

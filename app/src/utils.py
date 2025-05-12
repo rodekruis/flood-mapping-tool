@@ -10,9 +10,9 @@ from src import hf_utils
 from src.config_parameters import params
 
 
-def get_aoi_id_from_selector_preview(all_aois, name_id_preview):
+def get_aoi_id_from_selector_preview(all_aois, name):
     for aoi_id, aoi in all_aois.items():
-        if aoi["name_id_preview"] == name_id_preview:
+        if aoi["name"] == name:
             return aoi_id
 
 
@@ -111,11 +111,10 @@ def add_about():
         None
     """
     # About textbox
-    st.sidebar.markdown("## About")
+    st.sidebar.markdown("## Source Code")
     st.sidebar.markdown(
         f"""
         <p>
-            Todo: general about stuff <br />
             <a href='{params["url_github_repo"]}'>
             Github Repo</a>
         </p>
