@@ -122,6 +122,14 @@ def add_about():
         unsafe_allow_html=True,
     )
 
+    st.sidebar.markdown("## Feedback")
+    st.sidebar.markdown(
+        """
+        Were you able to find a useful flood map or experiencing a bug?
+        Please leave any feedback through [this quick form](https://ee.ifrc.org/x/ZeCPlh7W).
+        """
+    )
+
     # Contacts textbox
     st.sidebar.markdown(" ")
     st.sidebar.markdown("## Contacts")

@@ -5,7 +5,8 @@ params = {
     "browser_title": "Flood mapping tool - 510",
     # Data scientists involved
     "data_scientists": {
-        "Daniele": "dcastellana@redcross.nl",
+        "Heleen": "helenbaas@redcross.nl",
+        "Jacopo": "jmargutti@redcross.nl",
     },
     # Urls
     "url_github_repo": "https://github.com/rodekruis/flood-mapping-tool",
