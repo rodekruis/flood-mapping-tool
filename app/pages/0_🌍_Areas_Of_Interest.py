@@ -115,7 +115,7 @@ elif radio_selection == "Create New Area":
 
 # Delete area does exactly that, it will show the selected area and a delete button
 elif radio_selection == "Delete Area":
-    existing_areas = [aoi["name_id_preview"] for aoi in aois.values()]
+    existing_areas = [aoi["name"] for aoi in aois.values()]
 
     area_to_delete_name_id = st.selectbox(
         "Choose area to delete", options=existing_areas

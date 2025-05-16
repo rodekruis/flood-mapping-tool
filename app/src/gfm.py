@@ -172,7 +172,6 @@ class GFMHandler:
             aoi["aoi_id"]: {
                 "name": aoi["aoi_name"],
                 "bbox": aoi["geoJSON"],
-                "name_id_preview": f"{aoi['aoi_name']} - {aoi['aoi_id'][:6]}...",
             }
             for aoi in aois
         }
